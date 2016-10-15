@@ -15,7 +15,7 @@ import datetime
 import matplotlib.pyplot as plt
 import xgboost as xgb
 
-
+xx
 # 加载数据，并进行预处理
 def loadData():
     columns = ['User_id', 'Merchant_id', 'Coupon_id', 'Discount_rate', 'Distance', 'Date_received', 'Date']
