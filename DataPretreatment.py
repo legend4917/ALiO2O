@@ -27,8 +27,7 @@ def loadData():
 
 
 # 将形如 x:y 格式的折扣形式全部转化为小数形式，并讲其价格提取出来作为特征使用
-def get_Discount_rate():
-    discount_rate = data_train['Discount_rate']
+def get_Discount_rate(discount_rate):
     discount_rate_temp = []
     price = []
     for i in range(discount_rate.values.size):
@@ -43,22 +42,18 @@ def get_Discount_rate():
 
 
 # 对距离特征进行归一化处理
-def distance_normal():      
-    distance = data_train['Distance']
+def distance_normal(distance):
     return [float(x)/10 for x in distance]
             
 
-def price_normal():
-    price = data_train['price']
+def price_normal(price):
     price_min = price.min()
     wid = price.max() - price.min()
     return [(x-price_min) / wid for x in price]
     
 
 # 根据Date_received和Date两个特征得出其所属类别，即优惠券是否在15天内使用
-def get_label():
-    Date_received = data_train['Date_received']
-    Date = data_train['Date']
+def get_label(Date_received, Date):
     label = []
     flag1 = Date_received.notnull().values
     flag2 = Date.notnull().values
@@ -73,7 +68,7 @@ def get_label():
     return label
     
 # 对样本类别进行均衡处理
-def get_sepSample():
+def get_sepSample(data_train):
     sample_pos = data_train[data_train['label'] == 1]
     sample_neg = data_train[data_train['label'] == 0]
     rate = sample_neg.shape[0] / sample_pos.shape[0]
@@ -85,7 +80,7 @@ def get_sepSample():
     
     
 # 画图查看样本各属性对其类别的影响情况
-def tryfind():
+def tryfind(data_train):
     # 查看Distance对消费券使用情况的影响
     temp = data_train['label'].groupby(data_train['Distance'])
     rate_distance = temp.sum() / temp.size()
@@ -105,36 +100,3 @@ def tryfind():
     plt.plot(cnt_price.sort_index(), marker='o')
     
     
-# 使用 logistic 回归进行训练和预测
-def logistic_predict():
-    clf = LogisticRegression()
-    clf.fit(data_train[['price','Distance','Discount_rate']], data_train['label'])
-    pre_proba = clf.predict_proba(data_train[['Discount_rate','Distance','Discount_rate']])
-    pre_label = clf.predict(data_train[['Discount_rate','Distance','Discount_rate']])
-    return pre_proba, pre_label
-    
-    
-# 使用 xgboost 进行训练和预测
-def xgboost_predict():
-    dtrain = xgb.DMatrix(data_train[['price','Distance']], label=data_train['label'])
-    param = {'bst:max_depth':2, 'bst:eta':1, 'silent':1, 'objective':'binary:logistic', 'scale_pos_weight':0.006 }
-    param['nthread'] = 4
-    plst = param.items()
-    plst += [('eval_metric', 'auc')]
-    num_round = 10
-    bst = xgb.train( plst, dtrain, num_round)
-    pre_label = bst.predict(dtrain)
-    return pre_label
-    
-
-if __name__ == '__main__':
-    global data_train, data_test
-    data_train, data_test = loadData()
-    data_train['Discount_rate'], data_train['price'] = get_Discount_rate()
-    data_train['Distance'] = distance_normal()
-    data_train['price'] = price_normal()
-    data_train['label'] = get_label()
-#    data_train = get_sepSample()
-#    tryfind(data_train)
-    pre_proba, pre_label = logistic_predict()
-#    pre_label = xgboost_predict()
