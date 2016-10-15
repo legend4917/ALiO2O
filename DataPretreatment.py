@@ -12,14 +12,13 @@ from numpy import nan as NA
 import string
 import datetime
 import matplotlib.pyplot as plt
-import xgboost as xgb
 
 
 # 加载数据，并进行预处理
 def loadData():
     columns = ['User_id', 'Merchant_id', 'Coupon_id', 'Discount_rate', 'Distance', 'Date_received', 'Date']
-    data_train = pd.read_csv('ccf_data/ccf_offline_stage1_train.csv', header=None, names=columns, index_col=['Coupon_id'])
-    data_test = pd.read_csv('ccf_data/ccf_offline_stage1_test.csv', header=None, names=columns, index_col=['Coupon_id'])
+    data_train = pd.read_csv('ccf_data/ccf_offline_stage1_train.csv', header=None, names=columns)
+    data_test = pd.read_csv('ccf_data/ccf_offline_stage1_test.csv', header=None, names=columns)
     data_train = data_train.replace({'null':NA})
     return data_train, data_test
 
@@ -27,15 +26,17 @@ def loadData():
 # 缺失值处理
 def handleNA(data_train):
     data_train = data_train.dropna(subset=['Discount_rate', 'Distance'])    # 直接删除缺失值
+    return data_train
     
     
-# 将形如 x:y 格式的折扣形式全部转化为小数形式，并讲其价格提取出来作为特征使用
+# 将形如 x:y 格式的优惠形式全部转化为小数形式，并将其价格提取出来作为特征使用
 def get_Discount_rate(discount_rate):
     discount_rate_temp = []
     price = []
     for i in range(discount_rate.values.size):
         temp = discount_rate.values[i].split(':')
         if(len(temp) == 2):
+#            discount_rate_temp.append(string.atof(temp[1]) / string.atof(temp[0]))
             discount_rate_temp.append(round((string.atof(temp[0]) - string.atof(temp[1])) / string.atof(temp[0]), 2))
             price.append(string.atof(temp[0]))
         else:
