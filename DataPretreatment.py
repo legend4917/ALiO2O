@@ -10,7 +10,6 @@ Created on Tue Oct 11 15:11:16 2016
 import pandas as pd
 from numpy import nan as NA
 import string
-from sklearn.linear_model import LogisticRegression
 import datetime
 import matplotlib.pyplot as plt
 import xgboost as xgb
@@ -22,10 +21,14 @@ def loadData():
     data_train = pd.read_csv('ccf_data/ccf_offline_stage1_train.csv', header=None, names=columns, index_col=['Coupon_id'])
     data_test = pd.read_csv('ccf_data/ccf_offline_stage1_test.csv', header=None, names=columns, index_col=['Coupon_id'])
     data_train = data_train.replace({'null':NA})
-    data_train = data_train.dropna(subset=['Discount_rate', 'Distance'])    # 直接删除缺失值
     return data_train, data_test
 
 
+# 缺失值处理
+def handleNA(data_train):
+    data_train = data_train.dropna(subset=['Discount_rate', 'Distance'])    # 直接删除缺失值
+    
+    
 # 将形如 x:y 格式的折扣形式全部转化为小数形式，并讲其价格提取出来作为特征使用
 def get_Discount_rate(discount_rate):
     discount_rate_temp = []
