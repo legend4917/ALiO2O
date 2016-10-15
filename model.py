@@ -10,14 +10,15 @@ from DataPretreatment import *
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 from sklearn.cross_validation import KFold
+import xgboost as xgb
 
 
 # 使用 logistic 回归进行训练和预测
 def logistic_predict(data_train):
-    kf = KFold(data_train.shape[0], n_folds=10)
+    kf = KFold(data_train.shape[0], n_folds=10, shuffle=True)
     for train_index, test_index in kf:
-        trainData = data_train.ix[train_index]
-        testData = data_train.ix[test_index]
+        trainData = data_train.iloc[train_index]
+        testData = data_train.iloc[test_index]
         clf = LogisticRegression()
         clf.fit(trainData[['price','Distance','Discount_rate']], trainData['label'])
         pre_proba = clf.predict_proba(testData[['Discount_rate','Distance','Discount_rate']])[:,1]
