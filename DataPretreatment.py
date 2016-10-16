@@ -8,6 +8,7 @@ Created on Tue Oct 11 15:11:16 2016
 
 
 import pandas as pd
+import numpy as np
 from numpy import nan as NA
 import string
 import datetime
@@ -16,19 +17,45 @@ import matplotlib.pyplot as plt
 
 # 加载数据，并进行预处理
 def loadData():
-    columns = ['User_id', 'Merchant_id', 'Coupon_id', 'Discount_rate', 'Distance', 'Date_received', 'Date']
-    data_train = pd.read_csv('ccf_data/ccf_offline_stage1_train.csv', header=None, names=columns)
-    data_test = pd.read_csv('ccf_data/ccf_offline_stage1_test.csv', header=None, names=columns)
+    columns1 = ['User_id', 'Merchant_id', 'Coupon_id', 'Discount_rate', 'Distance', 'Date_received', 'Date']
+    data_train = pd.read_csv('ccf_data/ccf_offline_stage1_train.csv', header=None, names=columns1)
     data_train = data_train.replace({'null':NA})
+    data_train = data_train.dropna(subset=['Coupon_id'])    # 直接删除缺失值
+    data_train['Distance'] = data_train['Distance'].astype(np.float)
+#    columns2 = ['User_id', 'Merchant_id', 'Action', 'Coupon_id', 'Discount_rate', 'Date_received', 'Date']
+#    online_data = pd.read_csv('ccf_data/ccf_online_stage1_train.csv', header=None, names=columns2)
+    columns3 = ['User_id', 'Merchant_id', 'Coupon_id', 'Discount_rate', 'Distance', 'Date_received']
+    data_test = pd.read_csv('ccf_data/ccf_offline_stage1_test.csv', header=None, names=columns3)
+    data_test['Distance'].map(lambda x: str(x))
+    data_test = data_test.replace({'null':NA})
+    data_test['Distance'] = data_test['Distance'].astype(np.float)
+#    online_data = online_data.replace({'null':NA})
+#    online_data = online_data.dropna(subset=['Coupon_id'])    # 直接删除缺失值
     return data_train, data_test
 
 
-# 缺失值处理
-def handleNA(data_train):
-    data_train = data_train.dropna(subset=['Discount_rate', 'Distance'])    # 直接删除缺失值
+# 训练数据缺失值处理
+def removeAllNA(data_train):
+    data_train = data_train.dropna(subset=['Coupon_id','Discount_rate', 'Distance'])    # 直接删除缺失值
     return data_train
     
+
+# 测试数据缺失值处理
+def fillTestDataNA(data_train, data_test):
+    dataTrain_median = data_train['Distance'].median(skipna=True)
+    data_train = data_train.set_index(['User_id'])
+    data_testNA = data_test[data_test['Distance'].isnull()]
+    for index in data_testNA.index:
+        user_id = data_testNA.ix[index]['User_id']
+        if user_id in data_train.index:
+            group = data_train.ix[user_id]['Distance']
+            data_test['Distance'][index] = np.median(group)
+            
+        else:
+            data_test['Distance'][index] = dataTrain_median
+    return data_test
     
+
 # 将形如 x:y 格式的优惠形式全部转化为小数形式，并将其价格提取出来作为特征使用
 def get_Discount_rate(discount_rate):
     discount_rate_temp = []
@@ -50,6 +77,7 @@ def distance_normal(distance):
     return [float(x)/10 for x in distance]
             
 
+# 价格归一化
 def price_normal(price):
     price_min = price.min()
     wid = price.max() - price.min()
@@ -61,10 +89,11 @@ def get_label(Date_received, Date):
     label = []
     flag1 = Date_received.notnull().values
     flag2 = Date.notnull().values
-    for i in range(Date.size):
-        if(flag1[i] and flag2[i] and string.atoi(Date.values[i],10)-string.atoi(Date_received.values[i],10)<=15):
-            date1 = datetime.datetime.strptime(Date.values[i], '%Y%m%d').date()
-            date2 = datetime.datetime.strptime(Date_received.values[i], '%Y%m%d').date()
+    for i in range(Date.shape[0]):
+        if(flag1[i] and flag2[i]):
+            date1 = datetime.datetime.strptime(str(Date.iloc[i]), '%Y%m%d').date()
+            date2 = datetime.datetime.strptime(str(Date_received.iloc[i]), '%Y%m%d').date()
+#            date2 = datetime.datetime.strptime(str(Date_received[i]), '%Y%m%d').date()
             if((date1 - date2).days <= 15):
                 label.append(1)
                 continue
@@ -102,5 +131,22 @@ def tryfind(data_train):
     cnt_price = temp.sum() / temp.size()
     cnt_price = cnt_price.drop(-20)
     plt.plot(cnt_price.sort_index(), marker='o')
+
+
+# 数据预处理，综合调用前面的函数
+def dataPretreatment():
+    data_train, data_test = loadData()  # 加载数据
+    data_train = removeAllNA(data_train)    # 删除包含缺失值的数据
+    data_train['Discount_rate'], data_train['price'] = get_Discount_rate(data_train['Discount_rate'])
+#    data_train['Distance'] = distance_normal(data_train['Distance'])
+#    data_train['price'] = price_normal(data_train['price'])
+    data_train['label'] = get_label(data_train['Date_received'], data_train['Date'])
     
+    data_test = fillTestDataNA(data_train, data_test)
+    data_test['Discount_rate'], data_test['price'] = get_Discount_rate(data_test['Discount_rate'])
+#    data_test['Distance'] = distance_normal(data_test['Distance'])
+#    data_test['price'] = price_normal(data_test['price'])
+    return data_train, data_test
     
+if __name__ == '__main__':
+    data_train, data_test = dataPretreatment()
