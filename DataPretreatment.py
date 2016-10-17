@@ -6,7 +6,7 @@ Created on Tue Oct 11 15:11:16 2016
 @author: zxl
 """
 
-
+from handleNA import *
 import pandas as pd
 import numpy as np
 from numpy import nan as NA
@@ -34,26 +34,6 @@ def loadData():
     return data_train, data_test
 
 
-# 训练数据缺失值处理
-def removeAllNA(data_train):
-    data_train = data_train.dropna(subset=['Coupon_id','Discount_rate', 'Distance'])    # 直接删除缺失值
-    return data_train
-    
-
-# 测试数据缺失值处理
-def fillTestDataNA(data_train, data_test):
-    dataTrain_median = data_train['Distance'].median(skipna=True)
-    data_train = data_train.set_index(['User_id'])
-    data_testNA = data_test[data_test['Distance'].isnull()]
-    for index in data_testNA.index:
-        user_id = data_testNA.ix[index]['User_id']
-        if user_id in data_train.index:
-            group = data_train.ix[user_id]['Distance']
-            data_test['Distance'][index] = np.median(group)
-            
-        else:
-            data_test['Distance'][index] = dataTrain_median
-    return data_test
     
 
 # 将形如 x:y 格式的优惠形式全部转化为小数形式，并将其价格提取出来作为特征使用
@@ -137,12 +117,14 @@ def tryfind(data_train):
 def dataPretreatment():
     data_train, data_test = loadData()  # 加载数据
     data_train = removeAllNA(data_train)    # 删除包含缺失值的数据
+#    data_train = fillTrainDataNA_withGroupMode(data_train)
     data_train['Discount_rate'], data_train['price'] = get_Discount_rate(data_train['Discount_rate'])
 #    data_train['Distance'] = distance_normal(data_train['Distance'])
 #    data_train['price'] = price_normal(data_train['price'])
     data_train['label'] = get_label(data_train['Date_received'], data_train['Date'])
     
-    data_test = fillTestDataNA(data_train, data_test)
+#    data_test = fillTestDataNA(data_train, data_test)
+    data_test = fillTestDataNA_withMode(data_train, data_test)
     data_test['Discount_rate'], data_test['price'] = get_Discount_rate(data_test['Discount_rate'])
 #    data_test['Distance'] = distance_normal(data_test['Distance'])
 #    data_test['price'] = price_normal(data_test['price'])
